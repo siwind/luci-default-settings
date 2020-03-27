@@ -1,5 +1,14 @@
 #!/bin/sh
 
+#LANIP=100.127.64.1
+LANIP=192.168.1.1
+LANIP6=fd00:100:200::1
+LANIP6PRE=fd00:100:200::/48
+#WIFI1=TP-LINK_XYJC888
+WIFI1=OpenWrt
+WIFI2=${WIFI1}-5G
+WPASS=88888888
+
 uci set luci.main.lang=zh_cn
 # uci set luci.main.mediaurlbase=Bootstap
 uci commit luci
@@ -25,25 +34,26 @@ uci set wireless.@wifi-device[0].noscan=1
 
 uci set wireless.@wifi-iface[0].network=lan
 uci set wireless.@wifi-iface[0].mode=ap
-uci set wireless.@wifi-iface[0].ssid=TP-LINK_DJK888
+uci set wireless.@wifi-iface[0].ssid=$WIFI1
 uci set wireless.@wifi-iface[0].encryption=psk2+ccmp
-uci set wireless.@wifi-iface[0].key=123
+uci set wireless.@wifi-iface[0].key=$WPASS
 
 # 5G wifi
-uci set wireless.default_radio1.ssid=TP-LINK-DJK888-5G
+uci set wireless.default_radio1.ssid=$WIFI2
 uci set wireless.default_radio1.encryption=psk2+ccmp
-uci set wireless.default_radio1.key=123
+uci set wireless.default_radio1.key=$WPASS
 
 uci commit wireless
 
 #local lan ip address
-uci set network.lan.ipaddr=192.168.20.1
+uci set network.lan.ipaddr=$LANIP
 # IPv6 ula_prefix
-uci set network.globals.ula_prefix=fd00:100:100::/48
+uci set network.globals.ula_prefix=$LANIP6PRE
 uci commit network
 
 ################################
-
+# mirror of openwrt
+sed -i 's/downloads.openwrt.org/mirrors.tuna.tsinghua.edu.cn\/openwrt/g' /etc/opkg/distfeeds.conf
 # sed -i 's/downloads.openwrt.org/openwrt.proxy.ustclug.org/g' /etc/opkg/distfeeds.conf
 # sed -i 's/root::0:0:99999:7:::/root:$1$BuM.Ox4e$X/RX2ftRaBzzVzoL6TkI0/:0:0:99999:7:::/g' /etc/shadow
 
@@ -60,9 +70,9 @@ uci set dhcp.lan.ra_default='1'
 uci commit dhcp
 #/etc/init.d/network restart
 
-sed -i '/REDIRECT --to-ports 53/d' /etc/firewall.user
-echo "iptables -t nat -A PREROUTING -p udp --dport 53 -j REDIRECT --to-ports 53" >> /etc/firewall.user
-echo "iptables -t nat -A PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports 53" >> /etc/firewall.user
+#sed -i '/REDIRECT --to-ports 53/d' /etc/firewall.user
+#echo "iptables -t nat -A PREROUTING -p udp --dport 53 -j REDIRECT --to-ports 53" >> /etc/firewall.user
+#echo "iptables -t nat -A PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports 53" >> /etc/firewall.user
 
 sed -i '/option disabled/d' /etc/config/wireless
 sed -i '/set wireless.radio${devidx}.disabled/d' /lib/wifi/mac80211.sh
@@ -71,7 +81,7 @@ wifi up
 #IPv6 NAT
 echo "ip6tables -A FORWARD -i br-lan -j ACCEPT"   >> /etc/firewall.user
 echo "ip6tables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT" >> /etc/firewall.user
-echo "ip6tables -t nat -A POSTROUTING -s fd00:100:100::/48 -j MASQUERADE" >> /etc/firewall.user
+echo "ip6tables -t nat -A POSTROUTING -s $LANIP6PRE -j MASQUERADE" >> /etc/firewall.user
 
 #dnsmasq setting
 echo "localise-queries" >> /etc/dnsmasq.conf
@@ -85,12 +95,12 @@ uci set vlmcsd.config.autoactivate=1
 uci commit vlmcsd
 
 #Add /etc/hosts item
-echo "192.168.20.1				gw" >> /etc/hosts
-echo "fd00:100:100::1			gw" >> /etc/hosts
+echo "$LANIP				gw			fw" >> /etc/hosts
+echo "$LANIP6				gw6			fw6" >> /etc/hosts
 
-#cron command
-echo "30 4 * * * sleep 70 && touch /etc/banner && reboot "   >> /etc/crontabs/root
-/etc/init.d/cron    restart
+#cron command for reboot everyday
+#echo "30 4 * * * sleep 70 && touch /etc/banner && reboot "   >> /etc/crontabs/root
+#/etc/init.d/cron    restart
 
 #default, disable mwan3( for ipv6)
 /etc/init.d/mwan3 disable
