@@ -1,13 +1,18 @@
 #!/bin/sh
 
-#LANIP=100.127.64.1
-LANIP=192.168.1.1
-LANIP6=fd00:100:200::1
-LANIP6PRE=fd00:100:200::/48
-#WIFI1=TP-LINK_XYJC888
+LANIP=192.168.12.1
+LANIP6=fd00:100:120::1
+LANIP6PRE=fd00:100:120::/48
 WIFI1=OpenWrt
 WIFI2=${WIFI1}-5G
 WPASS=88888888
+
+#LANIP=100.127.64.1
+#LANIP6=fd00:100:200::1
+#LANIP6PRE=fd00:100:200::/48
+#WIFI1=TP-LINK_888
+#WIFI2=${WIFI1}-5G
+#WPASS=88888888
 
 uci set luci.main.lang=zh_cn
 # uci set luci.main.mediaurlbase=Bootstap
@@ -79,28 +84,43 @@ sed -i '/set wireless.radio${devidx}.disabled/d' /lib/wifi/mac80211.sh
 wifi up
 
 #IPv6 NAT
-echo "ip6tables -A FORWARD -i br-lan -j ACCEPT"   >> /etc/firewall.user
-echo "ip6tables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT" >> /etc/firewall.user
-echo "ip6tables -t nat -A POSTROUTING -s $LANIP6PRE -j MASQUERADE" >> /etc/firewall.user
+egrep -q  "ip6tables -A FORWARD -i br-lan -j ACCEPT"      /etc/firewall ||
+	echo  "ip6tables -A FORWARD -i br-lan -j ACCEPT"   >> /etc/firewall.user
+
+egrep -q  "ip6tables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT" /etc/firewall.user ||
+	echo  "ip6tables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT" >> /etc/firewall.user
+
+egrep -q  "ip6tables -t nat -A POSTROUTING -s $LANIP6PRE -j MASQUERADE"  /etc/firewall.user ||
+	echo  "ip6tables -t nat -A POSTROUTING -s $LANIP6PRE -j MASQUERADE" >> /etc/firewall.user
 
 #dnsmasq setting
-echo "localise-queries" >> /etc/dnsmasq.conf
-echo "bogus-priv" >> /etc/dnsmasq.conf
-echo "expand-hosts" >> /etc/dnsmasq.conf
-echo "srv-host=_vlmcs._tcp.lan,OpenWrt.lan,1688,0,100" >> /etc/dnsmasq.conf
-echo "" >> /etc/dnsmasq.conf
+egrep -q "localise-queries"  /etc/dnsmasq.conf ||
+	echo "localise-queries" >> /etc/dnsmasq.conf
+
+egrep -q "bogus-priv"  /etc/dnsmasq.conf ||
+	echo "bogus-priv" >> /etc/dnsmasq.conf
+
+egrep -q  "expand-hosts"  /etc/dnsmasq.conf ||
+	echo  "expand-hosts" >> /etc/dnsmasq.conf
+
+egrep -q  "srv-host=_vlmcs._tcp.lan,OpenWrt.lan,1688,0,100"  /etc/dnsmasq.conf ||
+	echo  "srv-host=_vlmcs._tcp.lan,OpenWrt.lan,1688,0,100" >> /etc/dnsmasq.conf
+
 
 #vlmcsd
 uci set vlmcsd.config.autoactivate=1
 uci commit vlmcsd
 
 #Add /etc/hosts item
+sed -i -re '/(^|\s)gw(\s|$)/d' /etc/hosts
 echo "$LANIP				gw			fw" >> /etc/hosts
+sed -i -re '/(^|\s)gw6(\s|$)/d' /etc/hosts
 echo "$LANIP6				gw6			fw6" >> /etc/hosts
 
-#cron command for reboot everyday
-#echo "30 4 * * * sleep 70 && touch /etc/banner && reboot "   >> /etc/crontabs/root
-#/etc/init.d/cron    restart
+#cron command
+egrep -q  "30 4 * * * sleep 70 && touch /etc/banner && reboot "    /etc/crontabs/root ||
+	echo  "30 4 * * * sleep 70 && touch /etc/banner && reboot "   >> /etc/crontabs/root
+/etc/init.d/cron    restart
 
 #default, disable mwan3( for ipv6)
 /etc/init.d/mwan3 disable
