@@ -8,7 +8,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-default-settings
 PKG_VERSION:=1.0
-PKG_RELEASE:=29
+PKG_RELEASE:=1
 PKG_LICENSE:=GPLv3
 PKG_LICENSE_FILES:=LICENSE
 
@@ -43,7 +43,7 @@ define Package/luci-default-settings/install
 	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/i18n
 	$(INSTALL_DIR) $(1)/etc/uci-defaults
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/*.lmo $(1)/usr/lib/lua/luci/i18n/
-	$(INSTALL_BIN) ./files/zzz-default-settings $(1)/etc/uci-defaults/99-default-settings
+	$(INSTALL_BIN) ./files/* $(1)/etc/uci-defaults/
 endef
 
 $(eval $(call BuildPackage,luci-default-settings))
