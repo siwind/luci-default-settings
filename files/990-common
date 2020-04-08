@@ -13,6 +13,7 @@ if [ ! -z "$EGSET" ]; then
 # uci set luci.main.mediaurlbase=Bootstap
 #uci commit luci
 
+uci set luci.main.lang=zh_cn
 uci set system.@system[0].timezone=CST-8
 uci set system.@system[0].zonename=Asia/Shanghai
 #uci commit system
@@ -38,15 +39,19 @@ sed -i 's/downloads.openwrt.org/mirrors.tuna.tsinghua.edu.cn\/openwrt/g' /etc/op
 egrep -q  "#30 4 * * * sleep 70 && touch /etc/banner && reboot "    /etc/crontabs/root ||
 	echo  "#30 4 * * * sleep 70 && touch /etc/banner && reboot "   >> /etc/crontabs/root
 
-#dnsmasq setting
-egrep -q "localise-queries"  /etc/dnsmasq.conf ||
-	echo "localise-queries" >> /etc/dnsmasq.conf
+# local dnsmasq setting
+uci set dhcp.dnsmasq.localise-queries='1'
+uci set dhcp.dnsmasq.expand-hosts='1'
+uci set dhcp.dnsmasq.boguspriv='1'
 
-egrep -q "bogus-priv"  /etc/dnsmasq.conf ||
-	echo "bogus-priv" >> /etc/dnsmasq.conf
+#egrep -q "localise-queries"  /etc/dnsmasq.conf ||
+#	echo "localise-queries" >> /etc/dnsmasq.conf
 
-egrep -q  "expand-hosts"  /etc/dnsmasq.conf ||
-	echo  "expand-hosts" >> /etc/dnsmasq.conf
+#egrep -q "bogus-priv"  /etc/dnsmasq.conf ||
+#	echo "bogus-priv" >> /etc/dnsmasq.conf
+
+#egrep -q  "expand-hosts"  /etc/dnsmasq.conf ||
+#	echo  "expand-hosts" >> /etc/dnsmasq.conf
 
 #vlmcsd autoactivate
 egrep -q  "srv-host=_vlmcs._tcp.lan,OpenWrt.lan,1688,0,100"  /etc/dnsmasq.conf ||
@@ -58,6 +63,9 @@ uci set vlmcsd.config.autoactivate=1
 
 # Write everything to flash
 uci commit
+
+# restart dnsmasq, leave to 999-file
+#/etc/init.d/dnsmasq restart
 
 fi   #endof EGSET
 
